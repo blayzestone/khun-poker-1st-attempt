@@ -6,7 +6,13 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
 `;
 
 function init() {
-  gameState.startGame();
+  function start() {
+    gameState.loop();
+
+    requestAnimationFrame(start);
+  }
+
+  requestAnimationFrame(start);
 }
 
 init();

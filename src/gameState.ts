@@ -1,5 +1,6 @@
 enum State {
   Init,
+  Start,
   P1Action,
   P2Action,
   Showdown,
@@ -23,17 +24,29 @@ type GameState = {
   p1: Player;
   p2: Player;
 
+  loop: () => void;
   startGame: () => void;
   dealCards: () => void;
   showdown: () => void;
 };
 
 export const gameState: GameState = {
-  state: State.Init,
+  state: State.Start,
   pot: 0,
 
   p1: { chips: 100, card: null },
   p2: { chips: 100, card: null },
+
+  loop() {
+    switch (this.state) {
+      case State.Start:
+        this.startGame();
+        break;
+      case State.Showdown:
+        this.showdown();
+        break;
+    }
+  },
 
   startGame() {
     console.log("Starting game");
@@ -53,8 +66,6 @@ export const gameState: GameState = {
 
     this.p1.card = card1;
     this.p2.card = card2;
-
-    this.showdown();
   },
 
   showdown() {
