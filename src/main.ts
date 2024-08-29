@@ -1,8 +1,15 @@
+import { gameState } from "./gameState";
 import "./style.css";
 
 document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
   <h1>Hello World</h1>
 `;
+
+function init() {
+  gameState.startGame();
+}
+
+init();
 
 /* 
   GAME LOOP
