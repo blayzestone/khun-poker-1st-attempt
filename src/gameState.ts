@@ -1,3 +1,4 @@
+import { GameTreeNode } from "./gameTree";
 import { CreatePlayer, Player, PlayerAction, PlayerCards } from "./player";
 
 enum State {
@@ -13,18 +14,6 @@ export enum Card {
   Queen,
   King,
 }
-
-type GameTreeNode = {
-  player: Player;
-  cards: PlayerCards;
-  action: PlayerAction | null;
-  probability: number;
-  terminal: boolean; // Game end node
-  parent: GameTreeNode | null;
-  children: {
-    [key in PlayerAction]?: GameTreeNode;
-  };
-};
 
 type GameState = {
   state: State;
