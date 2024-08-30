@@ -39,7 +39,7 @@ type GameState = {
   startGame: () => void;
   dealCards: () => PlayerCards;
   buildGameTree: (current: GameTreeNode) => void;
-  playGame: () => void;
+  playGame: (current: GameTreeNode) => void;
   awardPot: (p: Player) => void;
 };
 
@@ -64,7 +64,9 @@ export const gameState: GameState = {
         this.state = State.PlayGame;
         break;
       case State.PlayGame:
-        this.playGame();
+        if (!this.gameTreeRoot) return;
+        console.log("Playing game");
+        this.playGame(this.gameTreeRoot);
         this.state = State.Init;
         break;
     }
@@ -152,41 +154,39 @@ export const gameState: GameState = {
     }
   },
 
-  playGame() {
-    console.log("Playing game");
-    if (this.gameTreeRoot === null) return;
-    let currentGameNode = this.gameTreeRoot;
+  playGame(current: GameTreeNode) {
+    if (current.terminal) {
+      if (current.action === PlayerAction.Fold) {
+        this.awardPot(current.player);
+        return;
+      }
 
-    while (!currentGameNode.terminal) {
-      if (currentGameNode.action === PlayerAction.Bet) {
-        const action = currentGameNode.player.getActionFacingBet();
-        const nextGameNode = currentGameNode.children[action];
-        if (nextGameNode) {
-          console.log(currentGameNode.player.id, action);
-          currentGameNode = nextGameNode;
-        }
+      // Call or Check
+      console.log(
+        `P1: ${Card[current.cards.player1]} VS P2: ${
+          Card[current.cards.player2]
+        }`
+      );
+      if (current.cards.player1 > current.cards.player2) {
+        this.awardPot(this.p1);
       } else {
-        const action = currentGameNode.player.getAction();
-        const nextGameNode = currentGameNode.children[action];
-        if (nextGameNode) {
-          console.log(currentGameNode.player.id, action);
-          currentGameNode = nextGameNode;
-        }
+        this.awardPot(this.p2);
       }
     }
-    if (currentGameNode.action === PlayerAction.Fold) {
-      this.awardPot(currentGameNode.player);
-      return;
-    }
-    console.log(
-      `P1: ${Card[currentGameNode.cards.player1]} VS P2: ${
-        Card[currentGameNode.cards.player2]
-      }`
-    );
-    if (currentGameNode.cards.player1 > currentGameNode.cards.player2) {
-      this.awardPot(this.p1);
+    if (current.action === PlayerAction.Bet) {
+      const action = current.player.getActionFacingBet();
+      const nextGameNode = current.children[action];
+      if (nextGameNode) {
+        console.log(current.player.id, action);
+        this.playGame(nextGameNode);
+      }
     } else {
-      this.awardPot(this.p2);
+      const action = current.player.getAction();
+      const nextGameNode = current.children[action];
+      if (nextGameNode) {
+        console.log(current.player.id, action);
+        this.playGame(nextGameNode);
+      }
     }
   },
 
