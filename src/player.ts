@@ -1,6 +1,6 @@
 import { Card, PlayerAction } from "./constants";
 
-type PlayerID = "player1" | "player2";
+export type PlayerID = "player1" | "player2";
 
 type PlayerStrategy = {
   [key in Card]: {
@@ -8,28 +8,36 @@ type PlayerStrategy = {
   };
 };
 
-export type Player = {
-  id: PlayerID;
-  chips: number;
-  // Refactor to use class proxy
-  betAmount: number;
-  strategy: PlayerStrategy;
-  getAction(): PlayerAction.Bet | PlayerAction.Check;
-  getActionFacingBet(): PlayerAction.Call | PlayerAction.Fold;
-  bet(): void;
-};
-
 export type PlayerCards = {
   [key in PlayerID]: Card;
 };
 
-// TODO: Refactor into classes
-export function CreatePlayer(id: PlayerID): Player {
-  const player: Player = {
-    id,
-    chips: 100,
-    betAmount: 0,
-    strategy: {
+export class Player {
+  id: PlayerID;
+  // Refactor to use class proxy
+  card: Card;
+  strategy: PlayerStrategy;
+
+  private _chips: number;
+  get chips() {
+    return this._chips;
+  }
+  private _bet: number;
+  get bet() {
+    return this._bet;
+  }
+  set bet(amt: number) {
+    this._bet += amt;
+    this._chips -= amt;
+  }
+
+  constructor(id: PlayerID, card: Card) {
+    this.id = id;
+    this.card = card;
+    this._chips = 100;
+    this._bet = 0;
+
+    this.strategy = {
       [Card.Jack]: {
         [PlayerAction.Bet]: 0.5,
         [PlayerAction.Call]: 0.5,
@@ -48,22 +56,17 @@ export function CreatePlayer(id: PlayerID): Player {
         [PlayerAction.Check]: 0.5,
         [PlayerAction.Fold]: 0.5,
       },
-    },
-    getAction() {
-      return Math.floor(Math.random() * 2) === 0
-        ? PlayerAction.Bet
-        : PlayerAction.Check;
-    },
-    getActionFacingBet() {
-      return Math.floor(Math.random() * 2) === 0
-        ? PlayerAction.Call
-        : PlayerAction.Fold;
-    },
-    bet() {
-      this.chips--;
-      this.betAmount++;
-    },
-  };
-  return player;
+    };
+  }
+
+  getAction() {
+    return Math.floor(Math.random() * 2) === 0
+      ? PlayerAction.Bet
+      : PlayerAction.Check;
+  }
+  getActionFacingBet() {
+    return Math.floor(Math.random() * 2) === 0
+      ? PlayerAction.Call
+      : PlayerAction.Fold;
+  }
 }
-export { PlayerAction };
