@@ -1,3 +1,5 @@
+import { CreatePlayer, Player, PlayerAction } from "./player";
+
 enum State {
   Init,
   Start,
@@ -6,46 +8,10 @@ enum State {
   Showdown,
 }
 
-enum Card {
+export enum Card {
   Jack,
   Queen,
   King,
-}
-
-type Player = {
-  id: string;
-  chips: number;
-  card: Card | null;
-  getAction(): PlayerAction.Bet | PlayerAction.Check;
-  getActionFacingBet(): PlayerAction.Call | PlayerAction.Fold;
-};
-
-// TODO: Refactor into classes
-function CreatePlayer(id: string): Player {
-  const player: Player = {
-    id: id,
-    chips: 100,
-    card: null,
-
-    getAction() {
-      return Math.floor(Math.random() * 2) === 0
-        ? PlayerAction.Bet
-        : PlayerAction.Check;
-    },
-    getActionFacingBet() {
-      return Math.floor(Math.random() * 2) === 0
-        ? PlayerAction.Call
-        : PlayerAction.Fold;
-    },
-  };
-  return player;
-}
-
-enum PlayerAction {
-  Bet,
-  Call,
-  Check,
-  Fold,
 }
 
 type GameTreeNode = {
@@ -70,7 +36,7 @@ type GameState = {
   startGame: () => void;
   dealCards: () => void;
   showdown: () => void;
-  action: (current: GameTreeNode) => void;
+  buildGameTree: (current: GameTreeNode) => void;
   awardPot: (p: Player) => void;
   playerBet: (p: Player) => void;
 };
@@ -91,7 +57,7 @@ export const gameState: GameState = {
         break;
       case State.Action:
         if (!this.gameTreeRoot) return;
-        this.action(this.gameTreeRoot);
+        this.buildGameTree(this.gameTreeRoot);
         console.log(this.gameTreeRoot);
         this.state = State.WaitingAction;
         break;
@@ -121,7 +87,7 @@ export const gameState: GameState = {
     this.state = State.Action;
   },
 
-  action(current: GameTreeNode) {
+  buildGameTree(current: GameTreeNode) {
     if (current.action === PlayerAction.Call) {
       console.log("Called down");
       if (this.p1.card === null || this.p2.card === null) return;
@@ -163,8 +129,6 @@ export const gameState: GameState = {
 
     console.log(current.player.id, PlayerAction[action]);
 
-    // Basically if the second player check this state could only happen from check, check
-    // which leads to showdown and therefore payoff
     if (
       current.player.id === "player2" &&
       current.action === PlayerAction.Check &&
@@ -173,19 +137,10 @@ export const gameState: GameState = {
       console.log("showdown");
       this.state = State.Showdown;
       return;
-      //   if (this.p1.card === null || this.p2.card === null) return;
-      //   // Need to compare cards to determine who gets the payoff
-      //   if (this.p1.card > this.p2.card) {
-      //     this.gameTreeCurrent.payoff = [this.pot, 0];
-      //     this.awardPot(this.p1);
-      //   } else {
-      //     this.gameTreeCurrent.payoff = [0, this.pot];
-      //     this.awardPot(this.p2);
-      //   }
     }
 
     current.children[action] = nextNode;
-    this.action(nextNode);
+    this.buildGameTree(nextNode);
   },
 
   dealCards() {
