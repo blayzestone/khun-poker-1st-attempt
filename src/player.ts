@@ -1,11 +1,5 @@
-import { Card } from "./gameState";
+import { Card, PlayerAction } from "./constants";
 
-export enum PlayerAction {
-  Bet = "bet",
-  Call = "call",
-  Check = "check",
-  Fold = "fold",
-}
 type PlayerID = "player1" | "player2";
 
 type PlayerStrategy = {
@@ -72,3 +66,4 @@ export function CreatePlayer(id: PlayerID): Player {
   };
   return player;
 }
+export { PlayerAction };

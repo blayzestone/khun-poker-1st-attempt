@@ -1,19 +1,6 @@
+import { Card, State } from "./constants";
 import { GameTreeNode } from "./gameTree";
 import { CreatePlayer, Player, PlayerAction, PlayerCards } from "./player";
-
-enum State {
-  Init,
-  SetupGame,
-  BuildGameTree,
-  PlayGame,
-  ResetGame,
-}
-
-export enum Card {
-  Jack,
-  Queen,
-  King,
-}
 
 type GameState = {
   state: State;
@@ -58,14 +45,6 @@ export const gameState: GameState = {
         if (!this.gameTreeRoot) return;
         console.log("Playing game");
         this.playGame(this.gameTreeRoot);
-        console.log(
-          "P1:",
-          this.p1.chips,
-          "P2:",
-          this.p2.chips,
-          "pot",
-          this.pot
-        );
         this.state = State.ResetGame;
         break;
       case State.ResetGame:
@@ -154,12 +133,6 @@ export const gameState: GameState = {
       if (current.action === PlayerAction.Fold) {
         current.player.chips += this.pot;
       } else {
-        // Call or Check
-        console.log(
-          `P1: ${Card[current.cards.player1]} VS P2: ${
-            Card[current.cards.player2]
-          }`
-        );
         if (current.cards.player1 > current.cards.player2) {
           this.p1.chips += this.pot;
         } else {
