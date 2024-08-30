@@ -14,13 +14,13 @@ export enum Card {
 }
 
 type GameTreeNode = {
+  pot: number;
   player: Player;
   cards: PlayerCards;
   action: PlayerAction | null;
   probability: number;
-  payoff: [number, number];
-  parent: GameTreeNode | null;
   terminal: boolean; // Game end node
+  parent: GameTreeNode | null;
   children: {
     [key in PlayerAction]?: GameTreeNode;
   };
@@ -28,7 +28,6 @@ type GameTreeNode = {
 
 type GameState = {
   state: State;
-  pot: number;
 
   p1: Player;
   p2: Player;
@@ -40,12 +39,10 @@ type GameState = {
   dealCards: () => PlayerCards;
   buildGameTree: (current: GameTreeNode) => void;
   playGame: (current: GameTreeNode) => void;
-  awardPot: (p: Player) => void;
 };
 
 export const gameState: GameState = {
   state: State.SetupGame,
-  pot: 0,
 
   p1: CreatePlayer("player1"),
   p2: CreatePlayer("player2"),
@@ -75,15 +72,18 @@ export const gameState: GameState = {
   startGame() {
     console.log("Starting game");
 
-    // Ante
-    this.p1.chips--;
-    this.p2.chips--;
-    this.pot += 2;
+    // Reset any player bets from the previous round.
+    this.p1.betAmount = 0;
+    this.p2.betAmount = 0;
+
+    // Each player antes 1 chip
+    this.p1.bet();
+    this.p2.bet();
 
     this.gameTreeRoot = {
       player: this.p1,
       cards: this.dealCards(),
-      payoff: [0, 0],
+      pot: this.p1.betAmount + this.p2.betAmount,
       probability: -1, // not sure what this should be for first turn.
       action: null,
       parent: null,
@@ -95,42 +95,22 @@ export const gameState: GameState = {
   },
 
   buildGameTree(current: GameTreeNode) {
-    if (current.action === PlayerAction.Call) {
-      if (current.cards.player1 > current.cards.player1) {
-        current.payoff = [this.pot, 0];
-      } else {
-        current.payoff = [0, this.pot];
-      }
+    if (
+      current.action === PlayerAction.Call ||
+      current.action === PlayerAction.Fold
+    ) {
       current.terminal = true;
       return;
     }
-    if (current.action === PlayerAction.Fold) {
-      // Set payoff values based to whoever didnt fold
-      if (current.player.id === "player1") {
-        current.payoff = [this.pot, 0];
-      } else {
-        current.payoff = [0, this.pot];
-      }
-      current.terminal = true;
-      return;
-    }
-    // If both players have checked, go to showdown
     if (
       current.parent &&
       current.parent.action === PlayerAction.Check &&
       current.action === PlayerAction.Check
     ) {
-      if (current.cards.player1 > current.cards.player2) {
-        current.payoff = [this.pot, 0];
-      } else {
-        current.payoff = [0, this.pot];
-      }
       current.terminal = true;
       return;
     }
 
-    const player = current.player.id === "player1" ? this.p2 : this.p1;
-    const playerCard = current.cards[player.id];
     let actions: PlayerAction[] = [];
     if (current.action === PlayerAction.Bet) {
       actions = [PlayerAction.Call, PlayerAction.Fold];
@@ -139,12 +119,18 @@ export const gameState: GameState = {
     }
 
     for (const a of actions) {
+      if (a === PlayerAction.Bet || a === PlayerAction.Call) {
+        current.player.bet();
+      }
+
+      const nextPlayer = current.player.id === "player1" ? this.p2 : this.p1;
+      const nextPlayerCard = current.cards[nextPlayer.id];
       const nextNode: GameTreeNode = {
-        player: player,
+        player: nextPlayer,
         cards: current.cards,
         action: a,
-        probability: player.strategy[playerCard][a],
-        payoff: [0, 0],
+        probability: nextPlayer.strategy[nextPlayerCard][a],
+        pot: this.p1.betAmount + this.p2.betAmount,
         parent: current,
         terminal: false,
         children: {},
@@ -157,21 +143,23 @@ export const gameState: GameState = {
   playGame(current: GameTreeNode) {
     if (current.terminal) {
       if (current.action === PlayerAction.Fold) {
-        this.awardPot(current.player);
-        return;
-      }
-
-      // Call or Check
-      console.log(
-        `P1: ${Card[current.cards.player1]} VS P2: ${
-          Card[current.cards.player2]
-        }`
-      );
-      if (current.cards.player1 > current.cards.player2) {
-        this.awardPot(this.p1);
+        current.player.chips += current.pot;
       } else {
-        this.awardPot(this.p2);
+        // Call or Check
+        console.log(
+          `P1: ${Card[current.cards.player1]} VS P2: ${
+            Card[current.cards.player2]
+          }`
+        );
+        if (current.cards.player1 > current.cards.player2) {
+          this.p1.chips += current.pot;
+        } else {
+          this.p2.chips += current.pot;
+        }
       }
+      console.log(`P1: ${this.p1.chips}bb | P2: ${this.p2.chips}bb`);
+      this.state = State.Init;
+      return;
     }
     if (current.action === PlayerAction.Bet) {
       const action = current.player.getActionFacingBet();
@@ -197,14 +185,5 @@ export const gameState: GameState = {
       player1: deck.splice(Math.floor(Math.random() * deck.length), 1)[0],
       player2: deck.splice(Math.floor(Math.random() * deck.length), 1)[0],
     };
-  },
-
-  awardPot(p: Player) {
-    p.chips += this.pot;
-    this.pot = 0;
-
-    console.log(`P1: ${this.p1.chips}bb | P2: ${this.p2.chips}bb`);
-
-    this.state = State.Init;
   },
 };

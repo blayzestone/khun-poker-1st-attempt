@@ -17,9 +17,12 @@ type PlayerStrategy = {
 export type Player = {
   id: PlayerID;
   chips: number;
+  // Refactor to use class proxy
+  betAmount: number;
   strategy: PlayerStrategy;
   getAction(): PlayerAction.Bet | PlayerAction.Check;
   getActionFacingBet(): PlayerAction.Call | PlayerAction.Fold;
+  bet(): void;
 };
 
 export type PlayerCards = {
@@ -31,6 +34,7 @@ export function CreatePlayer(id: PlayerID): Player {
   const player: Player = {
     id,
     chips: 100,
+    betAmount: 0,
     strategy: {
       [Card.Jack]: {
         [PlayerAction.Bet]: 0.5,
@@ -51,7 +55,6 @@ export function CreatePlayer(id: PlayerID): Player {
         [PlayerAction.Fold]: 0.5,
       },
     },
-
     getAction() {
       return Math.floor(Math.random() * 2) === 0
         ? PlayerAction.Bet
@@ -61,6 +64,10 @@ export function CreatePlayer(id: PlayerID): Player {
       return Math.floor(Math.random() * 2) === 0
         ? PlayerAction.Call
         : PlayerAction.Fold;
+    },
+    bet() {
+      this.chips--;
+      this.betAmount++;
     },
   };
   return player;
