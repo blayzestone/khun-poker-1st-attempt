@@ -6,6 +6,7 @@ export enum PlayerAction {
   Check = "check",
   Fold = "fold",
 }
+type PlayerID = "player1" | "player2";
 
 type PlayerStrategy = {
   [key in Card]: {
@@ -14,20 +15,22 @@ type PlayerStrategy = {
 };
 
 export type Player = {
-  id: string;
+  id: PlayerID;
   chips: number;
-  card: Card | null;
   strategy: PlayerStrategy;
   getAction(): PlayerAction.Bet | PlayerAction.Check;
   getActionFacingBet(): PlayerAction.Call | PlayerAction.Fold;
 };
 
+export type PlayerCards = {
+  [key in PlayerID]: Card;
+};
+
 // TODO: Refactor into classes
-export function CreatePlayer(id: string): Player {
+export function CreatePlayer(id: PlayerID): Player {
   const player: Player = {
-    id: id,
+    id,
     chips: 100,
-    card: null,
     strategy: {
       [Card.Jack]: {
         [PlayerAction.Bet]: 0.5,

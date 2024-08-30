@@ -1,4 +1,4 @@
-import { CreatePlayer, Player, PlayerAction } from "./player";
+import { CreatePlayer, Player, PlayerAction, PlayerCards } from "./player";
 
 enum State {
   Init,
@@ -16,6 +16,7 @@ export enum Card {
 
 type GameTreeNode = {
   player: Player;
+  cards: PlayerCards;
   action: PlayerAction | null;
   probability: number;
   payoff: [number, number];
@@ -36,8 +37,7 @@ type GameState = {
 
   loop: () => void;
   startGame: () => void;
-  dealCards: () => void;
-  showdown: () => void;
+  dealCards: () => PlayerCards;
   buildGameTree: (current: GameTreeNode) => void;
   awardPot: (p: Player) => void;
   playerBet: (p: Player) => void;
@@ -72,8 +72,6 @@ export const gameState: GameState = {
   startGame() {
     console.log("Starting game");
 
-    this.dealCards();
-
     // Ante
     this.p1.chips--;
     this.p2.chips--;
@@ -81,6 +79,7 @@ export const gameState: GameState = {
 
     this.gameTreeRoot = {
       player: this.p1,
+      cards: this.dealCards(),
       payoff: [0, 0],
       probability: -1, // not sure what this should be for first turn.
       action: null,
@@ -93,9 +92,7 @@ export const gameState: GameState = {
 
   buildGameTree(current: GameTreeNode) {
     if (current.action === PlayerAction.Call) {
-      if (this.p1.card === null || this.p2.card === null) return;
-      // Need to compare cards to determine who gets the payoff
-      if (this.p1.card > this.p2.card) {
+      if (current.cards.player1 > current.cards.player1) {
         current.payoff = [this.pot, 0];
       } else {
         current.payoff = [0, this.pot];
@@ -117,9 +114,7 @@ export const gameState: GameState = {
       current.parent.action === PlayerAction.Check &&
       current.action === PlayerAction.Check
     ) {
-      if (this.p1.card === null || this.p2.card === null) return;
-      // Need to compare cards to determine who gets the payoff
-      if (this.p1.card > this.p2.card) {
+      if (current.cards.player1 > current.cards.player2) {
         current.payoff = [this.pot, 0];
       } else {
         current.payoff = [0, this.pot];
@@ -128,6 +123,7 @@ export const gameState: GameState = {
     }
 
     const player = current.player.id === "player1" ? this.p2 : this.p1;
+    const playerCard = current.cards[player.id];
     let actions: PlayerAction[] = [];
     if (current.action === PlayerAction.Bet) {
       actions = [PlayerAction.Call, PlayerAction.Fold];
@@ -135,13 +131,12 @@ export const gameState: GameState = {
       actions = [PlayerAction.Bet, PlayerAction.Check];
     }
 
-    if (player.card === null) return;
-
     for (const a of actions) {
       const nextNode: GameTreeNode = {
         player: player,
+        cards: current.cards,
         action: a,
-        probability: player.strategy[player.card][a],
+        probability: player.strategy[playerCard][a],
         payoff: [0, 0],
         parent: current,
         children: {},
@@ -151,30 +146,13 @@ export const gameState: GameState = {
     }
   },
 
-  dealCards() {
+  dealCards(): PlayerCards {
     const deck = [Card.Jack, Card.Queen, Card.King];
 
-    const card1 = deck.splice(Math.floor(Math.random() * deck.length), 1)[0];
-    const card2 = deck.splice(Math.floor(Math.random() * deck.length), 1)[0];
-
-    console.log("deal cards");
-
-    this.p1.card = card1;
-    this.p2.card = card2;
-  },
-
-  showdown() {
-    if (this.p1.card === null || this.p2.card === null) return;
-
-    console.log(`P1: ${Card[this.p1.card]} VS P2: ${Card[this.p2.card]}`);
-
-    if (this.p1.card > this.p2.card) {
-      console.log("Player #1 wins!");
-      this.awardPot(this.p1);
-    } else {
-      console.log("Player #2 wins!");
-      this.awardPot(this.p2);
-    }
+    return {
+      player1: deck.splice(Math.floor(Math.random() * deck.length), 1)[0],
+      player2: deck.splice(Math.floor(Math.random() * deck.length), 1)[0],
+    };
   },
 
   awardPot(p: Player) {
