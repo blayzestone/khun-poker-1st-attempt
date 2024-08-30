@@ -19,6 +19,8 @@ type Player = {
   id: string;
   chips: number;
   card: Card | null;
+  getAction(): PlayerAction.Bet | PlayerAction.Check;
+  getActionFacingBet(): PlayerAction.Call | PlayerAction.Fold;
 };
 
 // TODO: Refactor into classes
@@ -27,6 +29,17 @@ function CreatePlayer(id: string): Player {
     id: id,
     chips: 100,
     card: null,
+
+    getAction() {
+      return Math.floor(Math.random() * 2) === 0
+        ? PlayerAction.Bet
+        : PlayerAction.Check;
+    },
+    getActionFacingBet() {
+      return Math.floor(Math.random() * 2) === 0
+        ? PlayerAction.Call
+        : PlayerAction.Fold;
+    },
   };
   return player;
 }
@@ -62,10 +75,6 @@ type GameState = {
   dealCards: () => void;
   showdown: () => void;
   action: () => void;
-  p1Action: () => void;
-  p2Action: () => void;
-  p1ActionFacingBet: () => void;
-  p2ActionFacingBet: () => void;
   awardPot: (p: Player) => void;
   playerBet: (p: Player) => void;
 };
@@ -87,17 +96,6 @@ export const gameState: GameState = {
         break;
       case State.Action:
         this.action();
-      case State.P1Action:
-        this.p1Action();
-        break;
-      case State.P2ActionFacingBet:
-        this.p2ActionFacingBet();
-        break;
-      case State.P2Action:
-        this.p2Action();
-        break;
-      case State.P1ActionFacingBet:
-        this.p1ActionFacingBet();
         break;
       case State.Showdown:
         this.showdown();
@@ -115,7 +113,7 @@ export const gameState: GameState = {
     this.p2.chips--;
     this.pot += 2;
 
-    this.state = State.P1Action;
+    this.state = State.Action;
   },
 
   action() {
@@ -132,96 +130,70 @@ export const gameState: GameState = {
     }
 
     if (this.gameTreeCurrent.action === PlayerAction.Call) {
+      console.log("Called down");
+      if (this.p1.card === null || this.p2.card === null) return;
       // Need to compare cards to determine who gets the payoff
+      if (this.p1.card > this.p2.card) {
+        this.gameTreeCurrent.payoff = [this.pot, 0];
+        this.awardPot(this.p1);
+      } else {
+        this.gameTreeCurrent.payoff = [0, this.pot];
+        this.awardPot(this.p2);
+      }
     }
 
     if (this.gameTreeCurrent.action === PlayerAction.Fold) {
       // Set payoff values based to whoever didnt fold
+      if (this.gameTreeCurrent.player.id === "player1") {
+        console.log("Player2 folded");
+        this.gameTreeCurrent.payoff = [this.pot, 0];
+      } else {
+        console.log("Player1 folded");
+        this.gameTreeCurrent.payoff = [0, this.pot];
+      }
+      this.awardPot(this.gameTreeCurrent.player);
+      return;
     }
 
-    // Basically if the second player check this state could only happen from check, check
-    // which leads to showdown and therefore payoff
-    if (
-      this.gameTreeCurrent.action === PlayerAction.Check &&
-      this.gameTreeCurrent.player.id === "player2"
-    ) {
-      // payoff based on showdown again
-    }
-
-    let actions = [PlayerAction.Bet, PlayerAction.Check];
-    if (this.gameTreeCurrent.action === PlayerAction.Bet) {
-      actions = [PlayerAction.Call, PlayerAction.Fold];
-    }
-
-    const action = actions[Math.floor(Math.random() * actions.length)];
+    const player =
+      this.gameTreeCurrent.player.id === "player1" ? this.p2 : this.p1;
+    const action =
+      this.gameTreeCurrent.action === PlayerAction.Bet
+        ? this.gameTreeCurrent.player.getActionFacingBet()
+        : this.gameTreeCurrent.player.getAction();
 
     const nextNode: GameTreeNode = {
-      player: this.gameTreeCurrent.player.id === "player1" ? this.p2 : this.p1,
+      player: player,
       action: action,
       payoff: [0, 0],
       children: {},
     };
 
+    console.log(this.gameTreeCurrent.player.id, PlayerAction[action]);
+
+    // Basically if the second player check this state could only happen from check, check
+    // which leads to showdown and therefore payoff
+    if (
+      this.gameTreeCurrent.player.id === "player2" &&
+      this.gameTreeCurrent.action === PlayerAction.Check &&
+      action === PlayerAction.Check
+    ) {
+      console.log("showdown");
+      this.state = State.Showdown;
+      return;
+      //   if (this.p1.card === null || this.p2.card === null) return;
+      //   // Need to compare cards to determine who gets the payoff
+      //   if (this.p1.card > this.p2.card) {
+      //     this.gameTreeCurrent.payoff = [this.pot, 0];
+      //     this.awardPot(this.p1);
+      //   } else {
+      //     this.gameTreeCurrent.payoff = [0, this.pot];
+      //     this.awardPot(this.p2);
+      //   }
+    }
+
     this.gameTreeCurrent.children[action] = nextNode;
-  },
-
-  p1Action() {
-    const actions = [PlayerAction.Bet, PlayerAction.Check];
-    const action = actions[Math.floor(Math.random() * actions.length)];
-
-    console.log(`P1 Action: ${PlayerAction[action]}`);
-
-    if (action === PlayerAction.Bet) {
-      this.p1.chips--;
-      this.pot += 1;
-      this.state = State.P2ActionFacingBet;
-    } else {
-      this.state = State.P2Action;
-    }
-  },
-  p2Action() {
-    const actions = [PlayerAction.Bet, PlayerAction.Check];
-    const action = actions[Math.floor(Math.random() * actions.length)];
-
-    console.log(`P2 Action: ${PlayerAction[action]}`);
-
-    if (action === PlayerAction.Bet) {
-      this.p2.chips--;
-      this.pot += 1;
-      this.state = State.P1ActionFacingBet;
-    } else {
-      this.state = State.Showdown;
-    }
-  },
-  p1ActionFacingBet() {
-    const actions = [PlayerAction.Call, PlayerAction.Fold];
-    const action = actions[Math.floor(Math.random() * actions.length)];
-
-    console.log(`P1 Action: ${PlayerAction[action]}`);
-
-    if (action === PlayerAction.Call) {
-      this.p1.chips--;
-      this.pot += 1;
-      this.state = State.Showdown;
-    } else {
-      console.log("Player #1 folds");
-      this.awardPot(this.p2);
-    }
-  },
-  p2ActionFacingBet() {
-    const actions = [PlayerAction.Call, PlayerAction.Fold];
-    const action = actions[Math.floor(Math.random() * actions.length)];
-
-    console.log(`P2 Action: ${PlayerAction[action]}`);
-
-    if (action === PlayerAction.Call) {
-      this.p2.chips--;
-      this.pot += 1;
-      this.state = State.Showdown;
-    } else {
-      console.log("Player #2 folds");
-      this.awardPot(this.p1);
-    }
+    this.gameTreeCurrent = nextNode;
   },
 
   dealCards() {
