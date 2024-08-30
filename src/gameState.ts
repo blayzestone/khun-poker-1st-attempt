@@ -5,6 +5,7 @@ enum State {
   SetupGame,
   BuildGameTree,
   PlayGame,
+  ResetGame,
 }
 
 export enum Card {
@@ -14,7 +15,6 @@ export enum Card {
 }
 
 type GameTreeNode = {
-  pot: number;
   player: Player;
   cards: PlayerCards;
   action: PlayerAction | null;
@@ -29,6 +29,8 @@ type GameTreeNode = {
 type GameState = {
   state: State;
 
+  pot: number;
+
   p1: Player;
   p2: Player;
 
@@ -39,10 +41,13 @@ type GameState = {
   dealCards: () => PlayerCards;
   buildGameTree: (current: GameTreeNode) => void;
   playGame: (current: GameTreeNode) => void;
+  resetGame: () => void;
 };
 
 export const gameState: GameState = {
   state: State.SetupGame,
+
+  pot: 0,
 
   p1: CreatePlayer("player1"),
   p2: CreatePlayer("player2"),
@@ -64,6 +69,19 @@ export const gameState: GameState = {
         if (!this.gameTreeRoot) return;
         console.log("Playing game");
         this.playGame(this.gameTreeRoot);
+        console.log(
+          "P1:",
+          this.p1.chips,
+          "P2:",
+          this.p2.chips,
+          "pot",
+          this.pot
+        );
+        this.state = State.ResetGame;
+        break;
+      case State.ResetGame:
+        console.log("Reset game");
+        this.resetGame();
         this.state = State.Init;
         break;
     }
@@ -72,18 +90,15 @@ export const gameState: GameState = {
   startGame() {
     console.log("Starting game");
 
-    // Reset any player bets from the previous round.
-    this.p1.betAmount = 0;
-    this.p2.betAmount = 0;
-
     // Each player antes 1 chip
     this.p1.bet();
     this.p2.bet();
 
+    this.pot += 2;
+
     this.gameTreeRoot = {
       player: this.p1,
       cards: this.dealCards(),
-      pot: this.p1.betAmount + this.p2.betAmount,
       probability: -1, // not sure what this should be for first turn.
       action: null,
       parent: null,
@@ -119,10 +134,6 @@ export const gameState: GameState = {
     }
 
     for (const a of actions) {
-      if (a === PlayerAction.Bet || a === PlayerAction.Call) {
-        current.player.bet();
-      }
-
       const nextPlayer = current.player.id === "player1" ? this.p2 : this.p1;
       const nextPlayerCard = current.cards[nextPlayer.id];
       const nextNode: GameTreeNode = {
@@ -130,7 +141,6 @@ export const gameState: GameState = {
         cards: current.cards,
         action: a,
         probability: nextPlayer.strategy[nextPlayerCard][a],
-        pot: this.p1.betAmount + this.p2.betAmount,
         parent: current,
         terminal: false,
         children: {},
@@ -141,9 +151,19 @@ export const gameState: GameState = {
   },
 
   playGame(current: GameTreeNode) {
+    // Handle betting
+    if (
+      current.action === PlayerAction.Bet ||
+      current.action === PlayerAction.Call
+    ) {
+      if (!current.parent) return;
+      current.parent?.player.bet();
+      this.pot += 1;
+    }
+
     if (current.terminal) {
       if (current.action === PlayerAction.Fold) {
-        current.player.chips += current.pot;
+        current.player.chips += this.pot;
       } else {
         // Call or Check
         console.log(
@@ -152,12 +172,11 @@ export const gameState: GameState = {
           }`
         );
         if (current.cards.player1 > current.cards.player2) {
-          this.p1.chips += current.pot;
+          this.p1.chips += this.pot;
         } else {
-          this.p2.chips += current.pot;
+          this.p2.chips += this.pot;
         }
       }
-      console.log(`P1: ${this.p1.chips}bb | P2: ${this.p2.chips}bb`);
       this.state = State.Init;
       return;
     }
@@ -176,6 +195,15 @@ export const gameState: GameState = {
         this.playGame(nextGameNode);
       }
     }
+  },
+
+  resetGame() {
+    // Reset any player bets from the previous round.
+    this.p1.betAmount = 0;
+    this.p2.betAmount = 0;
+
+    this.pot = 0;
+    this.gameTreeRoot = null;
   },
 
   dealCards(): PlayerCards {
