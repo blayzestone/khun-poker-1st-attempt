@@ -2,10 +2,7 @@ enum State {
   Init,
   Start,
   Action,
-  P1Action,
-  P2Action,
-  P1ActionFacingBet,
-  P2ActionFacingBet,
+  WaitingAction,
   Showdown,
 }
 
@@ -68,13 +65,12 @@ type GameState = {
   p2: Player;
 
   gameTreeRoot: GameTreeNode | null;
-  gameTreeCurrent: GameTreeNode | null;
 
   loop: () => void;
   startGame: () => void;
   dealCards: () => void;
   showdown: () => void;
-  action: () => void;
+  action: (current: GameTreeNode) => void;
   awardPot: (p: Player) => void;
   playerBet: (p: Player) => void;
 };
@@ -87,7 +83,6 @@ export const gameState: GameState = {
   p2: CreatePlayer("player2"),
 
   gameTreeRoot: null,
-  gameTreeCurrent: null,
 
   loop() {
     switch (this.state) {
@@ -95,7 +90,10 @@ export const gameState: GameState = {
         this.startGame();
         break;
       case State.Action:
-        this.action();
+        if (!this.gameTreeRoot) return;
+        this.action(this.gameTreeRoot);
+        console.log(this.gameTreeRoot);
+        this.state = State.WaitingAction;
         break;
       case State.Showdown:
         this.showdown();
@@ -113,54 +111,48 @@ export const gameState: GameState = {
     this.p2.chips--;
     this.pot += 2;
 
+    this.gameTreeRoot = {
+      player: this.p1,
+      payoff: [0, 0],
+      action: null,
+      children: {},
+    };
+
     this.state = State.Action;
   },
 
-  action() {
-    if (!this.gameTreeRoot) {
-      this.gameTreeRoot = {
-        player: this.p1,
-        payoff: [0, 0],
-        action: null,
-        children: {},
-      };
-    }
-    if (!this.gameTreeCurrent) {
-      this.gameTreeCurrent = this.gameTreeRoot;
-    }
-
-    if (this.gameTreeCurrent.action === PlayerAction.Call) {
+  action(current: GameTreeNode) {
+    if (current.action === PlayerAction.Call) {
       console.log("Called down");
       if (this.p1.card === null || this.p2.card === null) return;
       // Need to compare cards to determine who gets the payoff
       if (this.p1.card > this.p2.card) {
-        this.gameTreeCurrent.payoff = [this.pot, 0];
+        current.payoff = [this.pot, 0];
         this.awardPot(this.p1);
       } else {
-        this.gameTreeCurrent.payoff = [0, this.pot];
+        current.payoff = [0, this.pot];
         this.awardPot(this.p2);
       }
     }
 
-    if (this.gameTreeCurrent.action === PlayerAction.Fold) {
+    if (current.action === PlayerAction.Fold) {
       // Set payoff values based to whoever didnt fold
-      if (this.gameTreeCurrent.player.id === "player1") {
+      if (current.player.id === "player1") {
         console.log("Player2 folded");
-        this.gameTreeCurrent.payoff = [this.pot, 0];
+        current.payoff = [this.pot, 0];
       } else {
         console.log("Player1 folded");
-        this.gameTreeCurrent.payoff = [0, this.pot];
+        current.payoff = [0, this.pot];
       }
-      this.awardPot(this.gameTreeCurrent.player);
+      this.awardPot(current.player);
       return;
     }
 
-    const player =
-      this.gameTreeCurrent.player.id === "player1" ? this.p2 : this.p1;
+    const player = current.player.id === "player1" ? this.p2 : this.p1;
     const action =
-      this.gameTreeCurrent.action === PlayerAction.Bet
-        ? this.gameTreeCurrent.player.getActionFacingBet()
-        : this.gameTreeCurrent.player.getAction();
+      current.action === PlayerAction.Bet
+        ? current.player.getActionFacingBet()
+        : current.player.getAction();
 
     const nextNode: GameTreeNode = {
       player: player,
@@ -169,13 +161,13 @@ export const gameState: GameState = {
       children: {},
     };
 
-    console.log(this.gameTreeCurrent.player.id, PlayerAction[action]);
+    console.log(current.player.id, PlayerAction[action]);
 
     // Basically if the second player check this state could only happen from check, check
     // which leads to showdown and therefore payoff
     if (
-      this.gameTreeCurrent.player.id === "player2" &&
-      this.gameTreeCurrent.action === PlayerAction.Check &&
+      current.player.id === "player2" &&
+      current.action === PlayerAction.Check &&
       action === PlayerAction.Check
     ) {
       console.log("showdown");
@@ -192,8 +184,8 @@ export const gameState: GameState = {
       //   }
     }
 
-    this.gameTreeCurrent.children[action] = nextNode;
-    this.gameTreeCurrent = nextNode;
+    current.children[action] = nextNode;
+    this.action(nextNode);
   },
 
   dealCards() {
