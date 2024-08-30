@@ -2,10 +2,9 @@ import { CreatePlayer, Player, PlayerAction, PlayerCards } from "./player";
 
 enum State {
   Init,
-  Start,
-  Action,
-  WaitingAction,
-  Showdown,
+  SetupGame,
+  BuildGameTree,
+  PlayGame,
 }
 
 export enum Card {
@@ -21,6 +20,7 @@ type GameTreeNode = {
   probability: number;
   payoff: [number, number];
   parent: GameTreeNode | null;
+  terminal: boolean; // Game end node
   children: {
     [key in PlayerAction]?: GameTreeNode;
   };
@@ -39,12 +39,12 @@ type GameState = {
   startGame: () => void;
   dealCards: () => PlayerCards;
   buildGameTree: (current: GameTreeNode) => void;
+  playGame: () => void;
   awardPot: (p: Player) => void;
-  playerBet: (p: Player) => void;
 };
 
 export const gameState: GameState = {
-  state: State.Start,
+  state: State.SetupGame,
   pot: 0,
 
   p1: CreatePlayer("player1"),
@@ -54,17 +54,18 @@ export const gameState: GameState = {
 
   loop() {
     switch (this.state) {
-      case State.Start:
+      case State.SetupGame:
         this.startGame();
         break;
-      case State.Action:
+      case State.BuildGameTree:
         if (!this.gameTreeRoot) return;
         this.buildGameTree(this.gameTreeRoot);
         console.log("game tree", this.gameTreeRoot);
-        this.state = State.WaitingAction;
+        this.state = State.PlayGame;
         break;
-      case State.Showdown:
-        this.showdown();
+      case State.PlayGame:
+        this.playGame();
+        this.state = State.Init;
         break;
     }
   },
@@ -84,10 +85,11 @@ export const gameState: GameState = {
       probability: -1, // not sure what this should be for first turn.
       action: null,
       parent: null,
+      terminal: false,
       children: {},
     };
 
-    this.state = State.Action;
+    this.state = State.BuildGameTree;
   },
 
   buildGameTree(current: GameTreeNode) {
@@ -97,6 +99,7 @@ export const gameState: GameState = {
       } else {
         current.payoff = [0, this.pot];
       }
+      current.terminal = true;
       return;
     }
     if (current.action === PlayerAction.Fold) {
@@ -106,6 +109,7 @@ export const gameState: GameState = {
       } else {
         current.payoff = [0, this.pot];
       }
+      current.terminal = true;
       return;
     }
     // If both players have checked, go to showdown
@@ -119,6 +123,7 @@ export const gameState: GameState = {
       } else {
         current.payoff = [0, this.pot];
       }
+      current.terminal = true;
       return;
     }
 
@@ -139,10 +144,49 @@ export const gameState: GameState = {
         probability: player.strategy[playerCard][a],
         payoff: [0, 0],
         parent: current,
+        terminal: false,
         children: {},
       };
       current.children[a] = nextNode;
       this.buildGameTree(nextNode);
+    }
+  },
+
+  playGame() {
+    console.log("Playing game");
+    if (this.gameTreeRoot === null) return;
+    let currentGameNode = this.gameTreeRoot;
+
+    while (!currentGameNode.terminal) {
+      if (currentGameNode.action === PlayerAction.Bet) {
+        const action = currentGameNode.player.getActionFacingBet();
+        const nextGameNode = currentGameNode.children[action];
+        if (nextGameNode) {
+          console.log(currentGameNode.player.id, action);
+          currentGameNode = nextGameNode;
+        }
+      } else {
+        const action = currentGameNode.player.getAction();
+        const nextGameNode = currentGameNode.children[action];
+        if (nextGameNode) {
+          console.log(currentGameNode.player.id, action);
+          currentGameNode = nextGameNode;
+        }
+      }
+    }
+    if (currentGameNode.action === PlayerAction.Fold) {
+      this.awardPot(currentGameNode.player);
+      return;
+    }
+    console.log(
+      `P1: ${Card[currentGameNode.cards.player1]} VS P2: ${
+        Card[currentGameNode.cards.player2]
+      }`
+    );
+    if (currentGameNode.cards.player1 > currentGameNode.cards.player2) {
+      this.awardPot(this.p1);
+    } else {
+      this.awardPot(this.p2);
     }
   },
 
@@ -162,10 +206,5 @@ export const gameState: GameState = {
     console.log(`P1: ${this.p1.chips}bb | P2: ${this.p2.chips}bb`);
 
     this.state = State.Init;
-  },
-
-  playerBet(p: Player) {
-    p.chips -= 1;
-    this.pot += 1;
   },
 };
