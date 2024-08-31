@@ -5,6 +5,7 @@ export type GameTreeNode = {
   player: Player;
   action: PlayerAction | null;
   probability: number;
+  pot: number;
   terminal: boolean; // Game end node
   parent: GameTreeNode | null;
   children: {
@@ -15,21 +16,19 @@ export type GameTreeNode = {
 export class GameTree {
   p1: Player;
   p2: Player;
-  pot: number;
   root: GameTreeNode;
 
   constructor(p1: Player, p2: Player) {
     this.p1 = p1;
     this.p2 = p2;
 
-    this.pot = 0;
-
     // Each player antes 1
-    this.bet(this.p1);
-    this.bet(this.p2);
+    this.p1.bet++;
+    this.p2.bet++;
 
     const root = {
       player: this.p1,
+      pot: 2,
       probability: -1,
       action: null,
       parent: null,
@@ -40,6 +39,17 @@ export class GameTree {
   }
 
   buildGameTree(current: GameTreeNode, p1: Player, p2: Player): GameTreeNode {
+    // Put money in the pot
+    if (
+      current.action === PlayerAction.Bet ||
+      current.action === PlayerAction.Call
+    ) {
+      if (current.parent) {
+        current.parent.player.bet++;
+        current.pot++;
+      }
+    }
+
     if (
       current.action === PlayerAction.Call ||
       current.action === PlayerAction.Fold
@@ -58,7 +68,6 @@ export class GameTree {
 
     let actions: PlayerAction[] = [];
     if (current.action === PlayerAction.Bet) {
-      this.bet(current.player);
       actions = [PlayerAction.Call, PlayerAction.Fold];
     } else {
       actions = [PlayerAction.Bet, PlayerAction.Check];
@@ -68,6 +77,7 @@ export class GameTree {
       const nextNode: GameTreeNode = {
         player: p1,
         action: a,
+        pot: current.pot,
         probability: p1.strategy[p1.card][a],
         parent: current,
         terminal: false,
@@ -77,10 +87,5 @@ export class GameTree {
       current.children[a] = this.buildGameTree(nextNode, p2, p1);
     }
     return current;
-  }
-
-  bet(player: Player) {
-    player.bet++;
-    this.pot++;
   }
 }
