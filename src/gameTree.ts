@@ -1,17 +1,61 @@
 import { PlayerAction } from "./constants";
 import { Player } from "./player";
 
-export type GameTreeNode = {
-  player: Player;
-  action: PlayerAction | null;
-  probability: number;
+interface BaseGameTreeNode {
   pot: number;
-  terminal: boolean; // Game end node
   parent: GameTreeNode | null;
-  children: {
-    [key in PlayerAction]?: GameTreeNode;
-  };
-};
+  children: { [key in PlayerAction]?: GameTreeNode };
+}
+
+class DecisionNode implements BaseGameTreeNode {
+  pot: number;
+  parent: GameTreeNode | null;
+  children: { [key in PlayerAction]?: GameTreeNode };
+
+  constructor(pot: number, parent: GameTreeNode | null) {
+    this.pot = pot;
+    this.parent = parent;
+    this.children = {};
+  }
+
+  availableActions(): PlayerAction[] {
+    return [PlayerAction.Bet, PlayerAction.Check];
+  }
+}
+
+class ResponseNode implements BaseGameTreeNode {
+  pot: number;
+  parent: GameTreeNode | null;
+  children: { [key in PlayerAction]?: GameTreeNode };
+
+  constructor(pot: number, parent: GameTreeNode | null) {
+    this.pot = pot;
+    this.parent = parent;
+    this.children = {};
+  }
+
+  availableActions(): PlayerAction[] {
+    return [PlayerAction.Call, PlayerAction.Fold];
+  }
+}
+
+export class TerminalNode implements BaseGameTreeNode {
+  pot: number;
+  parent: GameTreeNode | null;
+  children: { [key in PlayerAction]?: GameTreeNode };
+
+  constructor(pot: number, parent: GameTreeNode | null) {
+    this.pot = pot;
+    this.parent = parent;
+    this.children = {};
+  }
+
+  availableActions(): PlayerAction[] {
+    return []; // No actions possible in a terminal node
+  }
+}
+
+export type GameTreeNode = DecisionNode | ResponseNode | TerminalNode;
 
 export class GameTree {
   p1: Player;
@@ -26,66 +70,37 @@ export class GameTree {
     this.p1.bet++;
     this.p2.bet++;
 
-    const root = {
-      player: this.p1,
-      pot: 2,
-      probability: -1,
-      action: null,
-      parent: null,
-      terminal: false,
-      children: {},
-    };
-    this.root = this.buildGameTree(root, this.p1, this.p2);
+    const node = new DecisionNode(null, 2);
+    this.root = this.buildGameTree(node);
   }
 
-  buildGameTree(current: GameTreeNode, p1: Player, p2: Player): GameTreeNode {
-    // Put money in the pot
-    if (
-      current.action === PlayerAction.Bet ||
-      current.action === PlayerAction.Call
-    ) {
-      if (current.parent) {
-        current.parent.player.bet++;
-        current.pot++;
+  // buildGameTree(current: GameTreeNode, p1: Player, p2: Player): GameTreeNode {
+  buildGameTree(current: GameTreeNode): GameTreeNode {
+    if (current instanceof TerminalNode) {
+      return current;
+    }
+
+    // const nextPlayer = current.player === p1 ? p2 : p1;
+
+    for (const action of current.availableActions()) {
+      let nextNode: GameTreeNode;
+      if (action === PlayerAction.Bet) {
+        nextNode = new ResponseNode(current.pot + 1, current);
+      } else if (action === PlayerAction.Call || action === PlayerAction.Fold) {
+        nextNode = new TerminalNode(current.pot, current);
+        // Both Players checked
+      } else if (
+        current.parent instanceof DecisionNode &&
+        action === PlayerAction.Check
+      ) {
+        nextNode = new TerminalNode(current.pot, current);
+      } else {
+        nextNode = new DecisionNode(current.pot, current);
       }
+
+      current.children[action] = this.buildGameTree(nextNode);
     }
 
-    if (
-      current.action === PlayerAction.Call ||
-      current.action === PlayerAction.Fold
-    ) {
-      current.terminal = true;
-      return current;
-    }
-    if (
-      current.parent &&
-      current.parent.action === PlayerAction.Check &&
-      current.action === PlayerAction.Check
-    ) {
-      current.terminal = true;
-      return current;
-    }
-
-    let actions: PlayerAction[] = [];
-    if (current.action === PlayerAction.Bet) {
-      actions = [PlayerAction.Call, PlayerAction.Fold];
-    } else {
-      actions = [PlayerAction.Bet, PlayerAction.Check];
-    }
-
-    for (const a of actions) {
-      const nextNode: GameTreeNode = {
-        player: p1,
-        action: a,
-        pot: current.pot,
-        probability: p1.strategy[p1.card][a],
-        parent: current,
-        terminal: false,
-        children: {},
-      };
-      nextNode.parent = current;
-      current.children[a] = this.buildGameTree(nextNode, p2, p1);
-    }
     return current;
   }
 }

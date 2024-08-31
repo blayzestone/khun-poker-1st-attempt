@@ -59,14 +59,7 @@ export class Player {
     };
   }
 
-  getAction() {
-    return Math.floor(Math.random() * 2) === 0
-      ? PlayerAction.Bet
-      : PlayerAction.Check;
-  }
-  getActionFacingBet() {
-    return Math.floor(Math.random() * 2) === 0
-      ? PlayerAction.Call
-      : PlayerAction.Fold;
+  getAction(actions: PlayerAction[]) {
+    return actions[Math.floor(Math.random() * actions.length)];
   }
 }
