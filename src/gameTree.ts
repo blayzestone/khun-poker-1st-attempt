@@ -22,15 +22,13 @@ export class GameTree {
     this.p1 = p1;
     this.p2 = p2;
 
+    this.pot = 0;
+
     // Each player antes 1
-    this.p1.bet++;
-    this.p2.bet++;
+    this.bet(this.p1);
+    this.bet(this.p2);
 
-    this.pot = this.p1.bet + this.p2.bet;
-
-    // this.root = this.buildGameTree(null, this.p1, this.p2);
-
-    this.root = {
+    const root = {
       player: this.p1,
       probability: -1,
       action: null,
@@ -38,17 +36,16 @@ export class GameTree {
       terminal: false,
       children: {},
     };
-
-    this.buildGameTree(this.root, this.p1, this.p2);
+    this.root = this.buildGameTree(root, this.p1, this.p2);
   }
 
-  buildGameTree(current: GameTreeNode, p1: Player, p2: Player) {
+  buildGameTree(current: GameTreeNode, p1: Player, p2: Player): GameTreeNode {
     if (
       current.action === PlayerAction.Call ||
       current.action === PlayerAction.Fold
     ) {
       current.terminal = true;
-      return;
+      return current;
     }
     if (
       current.parent &&
@@ -56,18 +53,18 @@ export class GameTree {
       current.action === PlayerAction.Check
     ) {
       current.terminal = true;
-      return;
+      return current;
     }
 
     let actions: PlayerAction[] = [];
     if (current.action === PlayerAction.Bet) {
+      this.bet(current.player);
       actions = [PlayerAction.Call, PlayerAction.Fold];
     } else {
       actions = [PlayerAction.Bet, PlayerAction.Check];
     }
 
     for (const a of actions) {
-      //   const nextPlayer = current.player.id === "player1" ? this.p2 : this.p1;
       const nextNode: GameTreeNode = {
         player: p1,
         action: a,
@@ -76,53 +73,14 @@ export class GameTree {
         terminal: false,
         children: {},
       };
-      current.children[a] = nextNode;
-      this.buildGameTree(nextNode, p2, p1);
+      nextNode.parent = current;
+      current.children[a] = this.buildGameTree(nextNode, p2, p1);
     }
+    return current;
   }
 
-  //   buildGameTree(
-  //     action: PlayerAction | null,
-  //     p1: Player,
-  //     p2: Player
-  //   ): GameTreeNode {
-  //     let actions: PlayerAction[] = [];
-  //     let nextAction = p1.getAction();
-  //     if (action === PlayerAction.Bet) {
-  //       actions = [PlayerAction.Call, PlayerAction.Fold];
-  //       nextAction = p1.getActionFacingBet();
-  //     } else {
-  //       actions = [PlayerAction.Bet, PlayerAction.Check];
-  //     }
-  //     const p = action ? p1.strategy[p1.card][action] : -1;
-  //     const node: GameTreeNode = {
-  //       player: p1,
-  //       action: action,
-  //       probability: p,
-  //       parent: null,
-  //       terminal: false,
-  //       children: {},
-  //     };
-  //     if (
-  //       node.action === PlayerAction.Call ||
-  //       node.action === PlayerAction.Fold
-  //     ) {
-  //       node.terminal = true;
-  //       return node;
-  //     }
-  //     if (
-  //       node.parent &&
-  //       node.parent.action === PlayerAction.Check &&
-  //       node.action === PlayerAction.Check
-  //     ) {
-  //       node.terminal = true;
-  //       return node;
-  //     }
-
-  //     for (const a of actions) {
-  //       const nextNode = this.buildGameTree(a, p2, p1);
-  //       node.children[a] = nextNode;
-  //     }
-  //     return node;
-  //   }
+  bet(player: Player) {
+    player.bet++;
+    this.pot++;
+  }
 }
