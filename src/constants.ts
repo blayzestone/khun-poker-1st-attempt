@@ -12,7 +12,7 @@ export enum Card {
   King,
 }
 
-export enum PlayerAction {
+export enum Action {
   Bet = "bet",
   Call = "call",
   Check = "check",

@@ -1,56 +1,74 @@
-import { PlayerAction } from "./constants";
-import { Player } from "./player";
+import { Action } from "./constants";
 
 interface BaseGameTreeNode {
   pot: number;
+  lastAction: Action | null;
   parent: GameTreeNode | null;
-  children: { [key in PlayerAction]?: GameTreeNode };
+  children: { [key in Action]?: GameTreeNode };
 }
 
 class DecisionNode implements BaseGameTreeNode {
   pot: number;
+  lastAction: Action | null;
   parent: GameTreeNode | null;
-  children: { [key in PlayerAction]?: GameTreeNode };
+  children: { [key in Action]?: GameTreeNode };
 
-  constructor(pot: number, parent: GameTreeNode | null) {
+  constructor(
+    pot: number,
+    lastAction: Action | null,
+    parent: GameTreeNode | null
+  ) {
     this.pot = pot;
+    this.lastAction = lastAction;
     this.parent = parent;
     this.children = {};
   }
 
-  availableActions(): PlayerAction[] {
-    return [PlayerAction.Bet, PlayerAction.Check];
+  availableActions(): Action[] {
+    return [Action.Bet, Action.Check];
   }
 }
 
 class ResponseNode implements BaseGameTreeNode {
   pot: number;
+  lastAction: Action | null;
   parent: GameTreeNode | null;
-  children: { [key in PlayerAction]?: GameTreeNode };
+  children: { [key in Action]?: GameTreeNode };
 
-  constructor(pot: number, parent: GameTreeNode | null) {
+  constructor(
+    pot: number,
+    lastAction: Action | null,
+    parent: GameTreeNode | null
+  ) {
     this.pot = pot;
+    this.lastAction = lastAction;
     this.parent = parent;
     this.children = {};
   }
 
-  availableActions(): PlayerAction[] {
-    return [PlayerAction.Call, PlayerAction.Fold];
+  availableActions(): Action[] {
+    return [Action.Call, Action.Fold];
   }
 }
 
 export class TerminalNode implements BaseGameTreeNode {
   pot: number;
+  lastAction: Action | null;
   parent: GameTreeNode | null;
-  children: { [key in PlayerAction]?: GameTreeNode };
+  children: { [key in Action]?: GameTreeNode };
 
-  constructor(pot: number, parent: GameTreeNode | null) {
+  constructor(
+    pot: number,
+    lastAction: Action | null,
+    parent: GameTreeNode | null
+  ) {
     this.pot = pot;
+    this.lastAction = lastAction;
     this.parent = parent;
     this.children = {};
   }
 
-  availableActions(): PlayerAction[] {
+  availableActions(): Action[] {
     return []; // No actions possible in a terminal node
   }
 }
@@ -58,24 +76,13 @@ export class TerminalNode implements BaseGameTreeNode {
 export type GameTreeNode = DecisionNode | ResponseNode | TerminalNode;
 
 export class GameTree {
-  p1: Player;
-  p2: Player;
   root: GameTreeNode;
 
-  constructor(p1: Player, p2: Player) {
-    this.p1 = p1;
-    this.p2 = p2;
-
-    // Each player antes 1
-    this.p1.bet++;
-    this.p2.bet++;
-
-    const node = new DecisionNode(null, 2);
-    this.root = this.buildGameTree(node);
+  constructor(pot: number) {
+    this.root = this._buildGameTree(new DecisionNode(pot, null, null));
   }
 
-  // buildGameTree(current: GameTreeNode, p1: Player, p2: Player): GameTreeNode {
-  buildGameTree(current: GameTreeNode): GameTreeNode {
+  private _buildGameTree(current: GameTreeNode): GameTreeNode {
     if (current instanceof TerminalNode) {
       return current;
     }
@@ -84,21 +91,22 @@ export class GameTree {
 
     for (const action of current.availableActions()) {
       let nextNode: GameTreeNode;
-      if (action === PlayerAction.Bet) {
-        nextNode = new ResponseNode(current.pot + 1, current);
-      } else if (action === PlayerAction.Call || action === PlayerAction.Fold) {
-        nextNode = new TerminalNode(current.pot, current);
+      if (action === Action.Bet) {
+        nextNode = new ResponseNode(current.pot + 1, action, current);
+      } else if (action === Action.Call || action === Action.Fold) {
+        nextNode = new TerminalNode(current.pot, action, current);
+
         // Both Players checked
       } else if (
         current.parent instanceof DecisionNode &&
-        action === PlayerAction.Check
+        action === Action.Check
       ) {
-        nextNode = new TerminalNode(current.pot, current);
+        nextNode = new TerminalNode(current.pot, action, current);
       } else {
-        nextNode = new DecisionNode(current.pot, current);
+        nextNode = new DecisionNode(current.pot, action, current);
       }
 
-      current.children[action] = this.buildGameTree(nextNode);
+      current.children[action] = this._buildGameTree(nextNode);
     }
 
     return current;
