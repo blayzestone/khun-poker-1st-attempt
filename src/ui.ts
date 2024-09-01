@@ -5,10 +5,23 @@ import { Player, PlayerCards } from "./player";
 export function setupNavButtons(gameState: GameState) {
   const nav = document.querySelector(".nav");
   if (nav) {
-    for (const el of nav.children) {
-      if (el.classList.contains("play")) {
-        el.addEventListener("click", () => {
+    for (const btn of nav.children) {
+      if (btn.classList.contains("start")) {
+        btn.addEventListener("click", () => {
           gameState.state = State.SetupGame;
+
+          btn.classList.add("hidden");
+          const stopBtn = document.querySelector(".nav .stop");
+          if (stopBtn) stopBtn.classList.remove("hidden");
+        });
+      }
+      if (btn.classList.contains("stop")) {
+        btn.addEventListener("click", () => {
+          gameState.resetAll();
+
+          btn.classList.add("hidden");
+          const startBtn = document.querySelector(".nav .start");
+          if (startBtn) startBtn.classList.remove("hidden");
         });
       }
     }
@@ -26,6 +39,8 @@ export function updatePlayerChips(player: Player) {
 }
 
 export function resetGameEffects() {
+  updatePot(0);
+
   const cards = document.querySelectorAll(`.card-holder`);
   for (const card of cards) {
     card.classList.remove("flip");

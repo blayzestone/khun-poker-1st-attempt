@@ -27,14 +27,14 @@ export class GameState {
     this.p1 = new Player("player1");
     this.p2 = new Player("player2");
 
+    this.turnPlayer = this.p1;
+
     this.cards = this.dealCards();
 
     const gameTree = new GameTree(2);
 
     this.root = gameTree.root;
     this.current = this.root;
-
-    this.turnPlayer = this.p1;
 
     this.state = State.Init;
   }
@@ -48,14 +48,12 @@ export class GameState {
         this.playGame();
         break;
       case State.ResetGame:
-        this.reset();
+        this.resetGame();
         break;
     }
   }
 
   startGame() {
-    resetGameEffects();
-
     this.cards = this.dealCards();
 
     // Each player antes 1
@@ -77,16 +75,14 @@ export class GameState {
         this.current.lastAction === Action.Check
       ) {
         const winner = this.showdown(this.p1, this.p2);
-        awardCrown(winner);
-        winner.chips += this.current.pot;
+        this.awardWiner(winner, this.current.pot);
       } else if (this.current.lastAction === Action.Fold) {
         if (this.turnPlayer.id === this.p1.id) {
           foldCard(this.p2);
         } else {
           foldCard(this.p1);
         }
-        awardCrown(this.turnPlayer);
-        this.turnPlayer.chips += this.current.pot;
+        this.awardWiner(this.turnPlayer, this.current.pot);
       }
 
       this.state = State.ResetGame;
@@ -109,13 +105,6 @@ export class GameState {
     this.current = nextNode;
   }
 
-  reset() {
-    this.p1.bet = 0;
-    this.p2.bet = 0;
-
-    this.state = State.SetupGame;
-  }
-
   toggleTurnPlayer() {
     if (!this.turnPlayer) return;
 
@@ -126,19 +115,50 @@ export class GameState {
     }
   }
 
+  resetGame() {
+    resetGameEffects();
+    this.p1.bet = 0;
+    this.p2.bet = 0;
+
+    this.state = State.SetupGame;
+  }
+
+  resetAll() {
+    resetGameEffects();
+
+    this.p1 = new Player("player1");
+    this.p2 = new Player("player2");
+
+    this.turnPlayer = this.p1;
+
+    updatePlayerChips(this.p1);
+    updatePlayerChips(this.p2);
+
+    const gameTree = new GameTree(2);
+
+    this.root = gameTree.root;
+    this.current = this.root;
+
+    this.state = State.Init;
+  }
+
   // showdown between both player's cards. The player with the higher rank
   // wins and is returned.
   showdown(p1: Player, p2: Player): Player {
     flipCardsFaceUp();
     const p1Card = this.cards[this.p1.id];
     const p2Card = this.cards[this.p2.id];
-    console.log(p1.id, p1Card);
-    console.log(p2.id, p2Card);
     if (p1Card > p2Card) {
       return p1;
     } else {
       return p2;
     }
+  }
+
+  awardWiner(winner: Player, pot: number) {
+    winner.chips += pot;
+    updatePlayerChips(winner);
+    awardCrown(winner);
   }
 
   dealCards(): PlayerCards {

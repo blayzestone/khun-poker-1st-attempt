@@ -3,7 +3,7 @@ import { GameState } from "./gameState";
 import { setupNavButtons } from "./ui";
 
 function init() {
-  const gameState = new GameState();
+  let gameState = new GameState();
 
   setupNavButtons(gameState);
 

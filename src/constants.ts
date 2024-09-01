@@ -19,4 +19,4 @@ export enum Action {
   Fold = "fold",
 }
 
-export const FRAME_RATE = 1000;
+export const FRAME_RATE = 3000;
