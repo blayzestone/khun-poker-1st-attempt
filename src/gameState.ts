@@ -12,9 +12,10 @@ type GameState = {
 
   loop: () => void;
   startGame: () => void;
-  playGame: (current: GameTreeNode, p1: Player, p2: Player) => void;
+  playGame: (current: GameTreeNode, turnPlayer: Player) => void;
   showdown: (p1: Player, p2: Player) => Player;
   dealCards: () => [Card, Card];
+  bet: (player: Player) => void;
 };
 
 export const gameState: GameState = {
@@ -31,8 +32,11 @@ export const gameState: GameState = {
         break;
       case State.PlayGame:
         if (!this.gameTree) return;
-        console.log("Playing game", this.gameTree.root);
-        this.playGame(this.gameTree.root, this.p1, this.p2);
+        console.log(`P1: ${this.p1.chips}bb | ${this.p1.bet} bet`);
+        console.log(`P2: ${this.p2.chips}bb | ${this.p2.bet} bet`);
+        this.playGame(this.gameTree.root, this.p1);
+        console.log(`P1: ${this.p1.chips}bb | ${this.p1.bet} bet`);
+        console.log(`P2: ${this.p2.chips}bb | ${this.p2.bet} bet`);
         this.state = State.Init;
         break;
     }
@@ -47,46 +51,49 @@ export const gameState: GameState = {
     this.p2.card = card2;
 
     // Each player antes 1
-    this.p1.bet++;
-    this.p2.bet++;
+    this.bet(this.p1);
+    this.bet(this.p2);
 
     this.gameTree = new GameTree(2);
 
     this.state = State.PlayGame;
   },
 
-  playGame(current: GameTreeNode, p1: Player, p2: Player) {
+  playGame(current: GameTreeNode, turnPlayer: Player) {
     if (!this.gameTree) return;
-
     if (current instanceof TerminalNode) {
       if (
         current.lastAction === Action.Call ||
         current.lastAction === Action.Check
       ) {
-        console.log(`P1: ${Card[p1.card]} VS P2: ${Card[p2.card]}`);
-        const winner = this.showdown(p1, p2);
+        console.log(`P1: ${Card[this.p1.card]} VS P2: ${Card[this.p2.card]}`);
+        const winner = this.showdown(this.p1, this.p2);
         console.log(`${winner.id} wins`);
         winner.chips += current.pot;
       } else if (current.lastAction === Action.Fold) {
-        p1.chips += current.pot;
+        turnPlayer.chips += current.pot;
       }
 
       this.state = State.Init;
       return;
     }
 
-    const action = p1.getAction(current.availableActions());
+    const action = turnPlayer.getAction(current.availableActions());
     const nextNode = current.children[action];
     if (!nextNode) {
       throw new Error(`No node available for action: ${action}`);
     }
-    console.log(p1.id, action);
+    console.log(turnPlayer.id, action);
 
-    if (Action.Bet || Action.Call) {
-      p1.bet++;
+    if (action === Action.Bet || action === Action.Call) {
+      this.bet(turnPlayer);
     }
 
-    this.playGame(nextNode, p2, p1);
+    if (turnPlayer.id === this.p1.id) {
+      this.playGame(nextNode, this.p2);
+    } else {
+      this.playGame(nextNode, this.p1);
+    }
   },
 
   // showdown between both player's cards. The player with the higher rank
@@ -106,5 +113,10 @@ export const gameState: GameState = {
     const card2 = deck.splice(Math.floor(Math.random() * deck.length), 1)[0];
 
     return [card1, card2];
+  },
+
+  bet(player: Player) {
+    player.bet++;
+    player.chips--;
   },
 };

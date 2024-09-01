@@ -18,21 +18,13 @@ export class Player {
   card: Card;
   strategy: PlayerStrategy;
   chips: number;
-
-  private _bet: number;
-  get bet() {
-    return this._bet;
-  }
-  set bet(amt: number) {
-    this._bet += amt;
-    this.chips -= amt;
-  }
+  bet: number;
 
   constructor(id: PlayerID, card: Card) {
     this.id = id;
     this.card = card;
     this.chips = 100;
-    this._bet = 0;
+    this.bet = 0;
 
     this.strategy = {
       [Card.Jack]: {

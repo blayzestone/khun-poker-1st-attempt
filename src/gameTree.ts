@@ -87,8 +87,6 @@ export class GameTree {
       return current;
     }
 
-    // const nextPlayer = current.player === p1 ? p2 : p1;
-
     for (const action of current.availableActions()) {
       let nextNode: GameTreeNode;
       if (action === Action.Bet) {
