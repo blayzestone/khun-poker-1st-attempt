@@ -9,34 +9,39 @@
   </head>
   <body>
     <div id="app">
-      <div class="player" id="player1">
-        <div class="card-holder">
-          <div class="back"></div>
-          <div class="card queen"></div>
+      <div class="game">
+        <div class="player" id="player1">
+          <div class="card-holder">
+            <div class="back"></div>
+            <div class="card"></div>
+          </div>
+          <div class="hud">
+            <div class="playerID">
+              <small>1</small>
+            </div> 
+            <p class="chips">100</p>
+          </div>
+          <div class="action"></div>
         </div>
-        <div class="hud">
-          <div class="playerID">
-            <small>1</small>
-          </div> 
-          <p class="chips">100</p>
+
+        <img class="crown" src="./src/assets/CROWN.svg" />
+        <h2 class="pot">Pot : 0bb</h2>
+
+        <div class="player" id="player2">
+          <div class="card-holder">
+            <div class="back"></div>
+            <div class="card"></div>
+          </div>
+          <div class="hud">
+            <div class="playerID">
+              <small>2</small>
+            </div> 
+            <p class="chips">100</p>
+          </div>
         </div>
-        <div class="action"></div>
       </div>
-
-      <img class="crown" src="./src/assets/CROWN.svg" />
-      <h2 class="pot">Pot : 0bb</h2>
-
-      <div class="player" id="player2">
-        <div class="card-holder">
-          <div class="back"></div>
-          <div class="card king"></div>
-        </div>
-        <div class="hud">
-          <div class="playerID">
-            <small>2</small>
-          </div> 
-          <p class="chips">100</p>
-        </div>
+      <div class="nav">
+        <button class="play">play</button>
       </div>
     </div>
     <script type="module" src="/src/main.ts"></script>

@@ -1,8 +1,12 @@
 import { FRAME_RATE } from "./constants";
 import { GameState } from "./gameState";
+import { setupNavButtons } from "./ui";
 
 function init() {
   const gameState = new GameState();
+
+  setupNavButtons(gameState);
+
   let nextFrameTime = Date.now();
   function nextAnimationFrame() {
     const now = Date.now();

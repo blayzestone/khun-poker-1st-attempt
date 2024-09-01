@@ -7,6 +7,7 @@ import {
   foldCard,
   resetGameEffects,
   updateActionMessage,
+  updateCards,
   updatePlayerChips,
   updatePot,
 } from "./ui";
@@ -28,10 +29,6 @@ export class GameState {
 
     this.cards = this.dealCards();
 
-    // Each player antes 1
-    this.bet(this.p1);
-    this.bet(this.p2);
-
     const gameTree = new GameTree(2);
 
     this.root = gameTree.root;
@@ -39,7 +36,7 @@ export class GameState {
 
     this.turnPlayer = this.p1;
 
-    this.state = State.SetupGame;
+    this.state = State.Init;
   }
 
   loop() {
@@ -57,6 +54,8 @@ export class GameState {
   }
 
   startGame() {
+    resetGameEffects();
+
     this.cards = this.dealCards();
 
     // Each player antes 1
@@ -64,8 +63,6 @@ export class GameState {
     this.bet(this.p2);
 
     updatePot(2);
-
-    resetGameEffects();
 
     this.current = this.root;
     this.turnPlayer = this.p1;
@@ -135,6 +132,8 @@ export class GameState {
     flipCardsFaceUp();
     const p1Card = this.cards[this.p1.id];
     const p2Card = this.cards[this.p2.id];
+    console.log(p1.id, p1Card);
+    console.log(p2.id, p2Card);
     if (p1Card > p2Card) {
       return p1;
     } else {
@@ -144,10 +143,12 @@ export class GameState {
 
   dealCards(): PlayerCards {
     const deck = [Card.Jack, Card.Queen, Card.King];
-    return {
+    const cards: PlayerCards = {
       player1: deck.splice(Math.floor(Math.random() * deck.length), 1)[0],
       player2: deck.splice(Math.floor(Math.random() * deck.length), 1)[0],
     };
+    updateCards(cards);
+    return cards;
   }
 
   bet(player: Player) {
