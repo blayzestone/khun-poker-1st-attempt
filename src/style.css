@@ -69,10 +69,10 @@ body {
   font-weight: bold;
 }
 
-.player .hud p {
+.player .hud .chips {
   font-weight: bold;
 }
-.player .hud p::after {
+.player .hud .chips::after {
   content: "bb";
 }
 

@@ -1,6 +1,7 @@
 import { Action, Card, State } from "./constants";
 import { GameTree, GameTreeNode, TerminalNode } from "./gameTree";
 import { Player } from "./player";
+import { updatePlayerChips, updatePot } from "./ui";
 
 type GameState = {
   state: State;
@@ -57,6 +58,8 @@ export const gameState: GameState = {
     this.bet(this.p1);
     this.bet(this.p2);
 
+    updatePot(2);
+
     this.gameTree = new GameTree(2);
     this.current = this.gameTree.root;
     this.turnPlayer = this.p1;
@@ -97,6 +100,7 @@ export const gameState: GameState = {
       this.bet(this.turnPlayer);
     }
 
+    updatePot(nextNode.pot);
     this.toggleTurnPlayer();
     this.current = nextNode;
   },
@@ -140,5 +144,6 @@ export const gameState: GameState = {
   bet(player: Player) {
     player.bet++;
     player.chips--;
+    updatePlayerChips(player);
   },
 };
