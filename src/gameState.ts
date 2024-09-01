@@ -13,6 +13,7 @@ type GameState = {
   loop: () => void;
   startGame: () => void;
   playGame: (current: GameTreeNode, turnPlayer: Player) => void;
+  reset: () => void;
   showdown: (p1: Player, p2: Player) => Player;
   dealCards: () => [Card, Card];
   bet: (player: Player) => void;
@@ -37,7 +38,9 @@ export const gameState: GameState = {
         this.playGame(this.gameTree.root, this.p1);
         console.log(`P1: ${this.p1.chips}bb | ${this.p1.bet} bet`);
         console.log(`P2: ${this.p2.chips}bb | ${this.p2.bet} bet`);
-        this.state = State.Init;
+        break;
+      case State.ResetGame:
+        this.reset();
         break;
     }
   },
@@ -74,7 +77,7 @@ export const gameState: GameState = {
         turnPlayer.chips += current.pot;
       }
 
-      this.state = State.Init;
+      this.state = State.ResetGame;
       return;
     }
 
@@ -94,6 +97,13 @@ export const gameState: GameState = {
     } else {
       this.playGame(nextNode, this.p1);
     }
+  },
+
+  reset() {
+    this.p1.bet = 0;
+    this.p2.bet = 0;
+
+    this.state = State.Init;
   },
 
   // showdown between both player's cards. The player with the higher rank

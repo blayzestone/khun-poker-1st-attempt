@@ -91,8 +91,12 @@ export class GameTree {
       let nextNode: GameTreeNode;
       if (action === Action.Bet) {
         nextNode = new ResponseNode(current.pot + 1, action, current);
-      } else if (action === Action.Call || action === Action.Fold) {
+      } else if (action === Action.Fold) {
         nextNode = new TerminalNode(current.pot, action, current);
+
+        // Both Players checked
+      } else if (action === Action.Call) {
+        nextNode = new TerminalNode(current.pot + 1, action, current);
 
         // Both Players checked
       } else if (
