@@ -1,6 +1,6 @@
 import { Action, Card, State } from "./constants";
 import { GameTree, GameTreeNode, TerminalNode } from "./gameTree";
-import { Player } from "./player";
+import { Player, PlayerCards } from "./player";
 import {
   awardCrown,
   flipCardsFaceUp,
@@ -11,34 +11,36 @@ import {
   updatePot,
 } from "./ui";
 
-type GameState = {
+export class GameState {
   state: State;
 
   p1: Player;
   p2: Player;
-  turnPlayer: Player | null;
+  turnPlayer: Player;
+  cards: PlayerCards;
 
-  gameTree: GameTree | null;
-  current: GameTreeNode | null;
+  root: GameTreeNode;
+  current: GameTreeNode;
 
-  loop: () => void;
-  startGame: () => void;
-  playGame: () => void;
-  reset: () => void;
-  showdown: (p1: Player, p2: Player) => Player;
-  dealCards: () => [Card, Card];
-  bet: (player: Player) => void;
-  toggleTurnPlayer: () => void;
-};
+  constructor() {
+    this.p1 = new Player("player1");
+    this.p2 = new Player("player2");
 
-export const gameState: GameState = {
-  state: State.SetupGame,
-  gameTree: null,
-  current: null,
+    this.cards = this.dealCards();
 
-  p1: new Player("player1", Card.Jack),
-  p2: new Player("player2", Card.Jack),
-  turnPlayer: null,
+    // Each player antes 1
+    this.bet(this.p1);
+    this.bet(this.p2);
+
+    const gameTree = new GameTree(2);
+
+    this.root = gameTree.root;
+    this.current = this.root;
+
+    this.turnPlayer = this.p1;
+
+    this.state = State.SetupGame;
+  }
 
   loop() {
     switch (this.state) {
@@ -52,13 +54,10 @@ export const gameState: GameState = {
         this.reset();
         break;
     }
-  },
+  }
 
   startGame() {
-    const [card1, card2] = this.dealCards();
-
-    this.p1.card = card1;
-    this.p2.card = card2;
+    this.cards = this.dealCards();
 
     // Each player antes 1
     this.bet(this.p1);
@@ -68,18 +67,13 @@ export const gameState: GameState = {
 
     resetGameEffects();
 
-    this.gameTree = new GameTree(2);
-    this.current = this.gameTree.root;
+    this.current = this.root;
     this.turnPlayer = this.p1;
 
     this.state = State.PlayGame;
-  },
+  }
 
   playGame() {
-    if (!this.gameTree) return;
-    if (!this.current) return;
-    if (!this.turnPlayer) return;
-
     if (this.current instanceof TerminalNode) {
       if (
         this.current.lastAction === Action.Call ||
@@ -116,14 +110,14 @@ export const gameState: GameState = {
     updatePot(nextNode.pot);
     this.toggleTurnPlayer();
     this.current = nextNode;
-  },
+  }
 
   reset() {
     this.p1.bet = 0;
     this.p2.bet = 0;
 
     this.state = State.SetupGame;
-  },
+  }
 
   toggleTurnPlayer() {
     if (!this.turnPlayer) return;
@@ -133,31 +127,32 @@ export const gameState: GameState = {
     } else {
       this.turnPlayer = this.p1;
     }
-  },
+  }
 
   // showdown between both player's cards. The player with the higher rank
   // wins and is returned.
   showdown(p1: Player, p2: Player): Player {
     flipCardsFaceUp();
-    if (p1.card > p2.card) {
+    const p1Card = this.cards[this.p1.id];
+    const p2Card = this.cards[this.p2.id];
+    if (p1Card > p2Card) {
       return p1;
     } else {
       return p2;
     }
-  },
+  }
 
-  dealCards(): [Card, Card] {
+  dealCards(): PlayerCards {
     const deck = [Card.Jack, Card.Queen, Card.King];
-
-    const card1 = deck.splice(Math.floor(Math.random() * deck.length), 1)[0];
-    const card2 = deck.splice(Math.floor(Math.random() * deck.length), 1)[0];
-
-    return [card1, card2];
-  },
+    return {
+      player1: deck.splice(Math.floor(Math.random() * deck.length), 1)[0],
+      player2: deck.splice(Math.floor(Math.random() * deck.length), 1)[0],
+    };
+  }
 
   bet(player: Player) {
     player.bet++;
     player.chips--;
     updatePlayerChips(player);
-  },
-};
+  }
+}

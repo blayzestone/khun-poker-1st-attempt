@@ -1,7 +1,8 @@
 import { FRAME_RATE } from "./constants";
-import { gameState } from "./gameState";
+import { GameState } from "./gameState";
 
 function init() {
+  const gameState = new GameState();
   let nextFrameTime = Date.now();
   function nextAnimationFrame() {
     const now = Date.now();

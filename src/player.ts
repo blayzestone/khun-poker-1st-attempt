@@ -14,15 +14,12 @@ export type PlayerCards = {
 
 export class Player {
   id: PlayerID;
-  // Refactor to use class proxy
-  card: Card;
   strategy: PlayerStrategy;
   chips: number;
   bet: number;
 
-  constructor(id: PlayerID, card: Card) {
+  constructor(id: PlayerID) {
     this.id = id;
-    this.card = card;
     this.chips = 100;
     this.bet = 0;
 
