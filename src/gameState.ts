@@ -2,6 +2,7 @@ import { Action, Card, State } from "./constants";
 import { GameTree, GameTreeNode, TerminalNode } from "./gameTree";
 import { Player } from "./player";
 import {
+  awardCrown,
   flipCardsFaceUp,
   foldCard,
   resetGameEffects,
@@ -85,6 +86,7 @@ export const gameState: GameState = {
         this.current.lastAction === Action.Check
       ) {
         const winner = this.showdown(this.p1, this.p2);
+        awardCrown(winner);
         winner.chips += this.current.pot;
       } else if (this.current.lastAction === Action.Fold) {
         if (this.turnPlayer.id === this.p1.id) {
@@ -92,6 +94,7 @@ export const gameState: GameState = {
         } else {
           foldCard(this.p1);
         }
+        awardCrown(this.turnPlayer);
         this.turnPlayer.chips += this.current.pot;
       }
 

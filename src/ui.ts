@@ -16,6 +16,10 @@ export function resetGameEffects() {
     card.classList.remove("flip");
     card.classList.remove("muck");
   }
+
+  const crown = document.querySelector(`.crown`);
+  if (crown) crown.classList.remove(`player1-win`);
+  if (crown) crown.classList.remove(`player2-win`);
 }
 
 export function flipCardsFaceUp() {
@@ -43,4 +47,9 @@ export function updateActionMessage(player: Player, message: string) {
       playerHud.removeChild(actionMessage);
     }, 2000);
   }
+}
+
+export function awardCrown(player: Player) {
+  const crown = document.querySelector(`.crown`);
+  if (crown) crown.classList.add(`${player.id}-win`);
 }

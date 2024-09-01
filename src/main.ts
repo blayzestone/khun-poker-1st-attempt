@@ -1,6 +1,5 @@
 import { FRAME_RATE } from "./constants";
 import { gameState } from "./gameState";
-import "./style.css";
 
 function init() {
   let nextFrameTime = Date.now();
