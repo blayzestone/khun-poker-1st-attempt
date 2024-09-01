@@ -1,14 +1,21 @@
+import { FRAME_RATE } from "./constants";
 import { gameState } from "./gameState";
 import "./style.css";
 
 function init() {
-  function start() {
-    gameState.loop();
+  let nextFrameTime = Date.now();
+  function nextAnimationFrame() {
+    const now = Date.now();
 
-    requestAnimationFrame(start);
+    if (nextFrameTime <= now) {
+      gameState.loop();
+      nextFrameTime = now + FRAME_RATE;
+    }
+
+    requestAnimationFrame(nextAnimationFrame);
   }
 
-  requestAnimationFrame(start);
+  requestAnimationFrame(nextAnimationFrame);
 }
 
 init();

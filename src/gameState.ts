@@ -7,24 +7,29 @@ type GameState = {
 
   p1: Player;
   p2: Player;
+  turnPlayer: Player | null;
 
   gameTree: GameTree | null;
+  current: GameTreeNode | null;
 
   loop: () => void;
   startGame: () => void;
-  playGame: (current: GameTreeNode, turnPlayer: Player) => void;
+  playGame: () => void;
   reset: () => void;
   showdown: (p1: Player, p2: Player) => Player;
   dealCards: () => [Card, Card];
   bet: (player: Player) => void;
+  toggleTurnPlayer: () => void;
 };
 
 export const gameState: GameState = {
   state: State.SetupGame,
   gameTree: null,
+  current: null,
 
   p1: new Player("player1", Card.Jack),
   p2: new Player("player2", Card.Jack),
+  turnPlayer: null,
 
   loop() {
     switch (this.state) {
@@ -32,12 +37,7 @@ export const gameState: GameState = {
         this.startGame();
         break;
       case State.PlayGame:
-        if (!this.gameTree) return;
-        console.log(`P1: ${this.p1.chips}bb | ${this.p1.bet} bet`);
-        console.log(`P2: ${this.p2.chips}bb | ${this.p2.bet} bet`);
-        this.playGame(this.gameTree.root, this.p1);
-        console.log(`P1: ${this.p1.chips}bb | ${this.p1.bet} bet`);
-        console.log(`P2: ${this.p2.chips}bb | ${this.p2.bet} bet`);
+        this.playGame();
         break;
       case State.ResetGame:
         this.reset();
@@ -58,45 +58,47 @@ export const gameState: GameState = {
     this.bet(this.p2);
 
     this.gameTree = new GameTree(2);
+    this.current = this.gameTree.root;
+    this.turnPlayer = this.p1;
 
     this.state = State.PlayGame;
   },
 
-  playGame(current: GameTreeNode, turnPlayer: Player) {
+  playGame() {
     if (!this.gameTree) return;
-    if (current instanceof TerminalNode) {
+    if (!this.current) return;
+    if (!this.turnPlayer) return;
+
+    if (this.current instanceof TerminalNode) {
       if (
-        current.lastAction === Action.Call ||
-        current.lastAction === Action.Check
+        this.current.lastAction === Action.Call ||
+        this.current.lastAction === Action.Check
       ) {
         console.log(`P1: ${Card[this.p1.card]} VS P2: ${Card[this.p2.card]}`);
         const winner = this.showdown(this.p1, this.p2);
         console.log(`${winner.id} wins`);
-        winner.chips += current.pot;
-      } else if (current.lastAction === Action.Fold) {
-        turnPlayer.chips += current.pot;
+        winner.chips += this.current.pot;
+      } else if (this.current.lastAction === Action.Fold) {
+        this.turnPlayer.chips += this.current.pot;
       }
 
       this.state = State.ResetGame;
       return;
     }
 
-    const action = turnPlayer.getAction(current.availableActions());
-    const nextNode = current.children[action];
+    const action = this.turnPlayer.getAction(this.current.availableActions());
+    const nextNode = this.current.children[action];
     if (!nextNode) {
       throw new Error(`No node available for action: ${action}`);
     }
-    console.log(turnPlayer.id, action);
+    console.log(this.turnPlayer.id, action);
 
     if (action === Action.Bet || action === Action.Call) {
-      this.bet(turnPlayer);
+      this.bet(this.turnPlayer);
     }
 
-    if (turnPlayer.id === this.p1.id) {
-      this.playGame(nextNode, this.p2);
-    } else {
-      this.playGame(nextNode, this.p1);
-    }
+    this.toggleTurnPlayer();
+    this.current = nextNode;
   },
 
   reset() {
@@ -104,6 +106,16 @@ export const gameState: GameState = {
     this.p2.bet = 0;
 
     this.state = State.Init;
+  },
+
+  toggleTurnPlayer() {
+    if (!this.turnPlayer) return;
+
+    if (this.turnPlayer.id === this.p1.id) {
+      this.turnPlayer = this.p2;
+    } else {
+      this.turnPlayer = this.p1;
+    }
   },
 
   // showdown between both player's cards. The player with the higher rank
