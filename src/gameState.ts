@@ -1,7 +1,14 @@
 import { Action, Card, State } from "./constants";
 import { GameTree, GameTreeNode, TerminalNode } from "./gameTree";
 import { Player } from "./player";
-import { updatePlayerChips, updatePot } from "./ui";
+import {
+  flipCardsFaceUp,
+  foldCard,
+  resetGameEffects,
+  updateActionMessage,
+  updatePlayerChips,
+  updatePot,
+} from "./ui";
 
 type GameState = {
   state: State;
@@ -47,8 +54,6 @@ export const gameState: GameState = {
   },
 
   startGame() {
-    console.log("Starting game");
-
     const [card1, card2] = this.dealCards();
 
     this.p1.card = card1;
@@ -59,6 +64,8 @@ export const gameState: GameState = {
     this.bet(this.p2);
 
     updatePot(2);
+
+    resetGameEffects();
 
     this.gameTree = new GameTree(2);
     this.current = this.gameTree.root;
@@ -77,11 +84,14 @@ export const gameState: GameState = {
         this.current.lastAction === Action.Call ||
         this.current.lastAction === Action.Check
       ) {
-        console.log(`P1: ${Card[this.p1.card]} VS P2: ${Card[this.p2.card]}`);
         const winner = this.showdown(this.p1, this.p2);
-        console.log(`${winner.id} wins`);
         winner.chips += this.current.pot;
       } else if (this.current.lastAction === Action.Fold) {
+        if (this.turnPlayer.id === this.p1.id) {
+          foldCard(this.p2);
+        } else {
+          foldCard(this.p1);
+        }
         this.turnPlayer.chips += this.current.pot;
       }
 
@@ -94,7 +104,7 @@ export const gameState: GameState = {
     if (!nextNode) {
       throw new Error(`No node available for action: ${action}`);
     }
-    console.log(this.turnPlayer.id, action);
+    updateActionMessage(this.turnPlayer, action);
 
     if (action === Action.Bet || action === Action.Call) {
       this.bet(this.turnPlayer);
@@ -109,7 +119,7 @@ export const gameState: GameState = {
     this.p1.bet = 0;
     this.p2.bet = 0;
 
-    this.state = State.Init;
+    this.state = State.SetupGame;
   },
 
   toggleTurnPlayer() {
@@ -125,6 +135,7 @@ export const gameState: GameState = {
   // showdown between both player's cards. The player with the higher rank
   // wins and is returned.
   showdown(p1: Player, p2: Player): Player {
+    flipCardsFaceUp();
     if (p1.card > p2.card) {
       return p1;
     } else {
