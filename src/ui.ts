@@ -102,3 +102,34 @@ export function awardCrown(player: Player) {
   const crown = document.querySelector(`.crown`);
   if (crown) crown.classList.add(`${player.id}-win`);
 }
+
+export function setPlayerStats(player: Player) {
+  const stats = document.querySelector(`#${player.id} .stats`);
+  if (stats) {
+    // Clear previous children
+    stats.innerHTML = "";
+
+    const headers = ["Card", "Check", "Bet", "Call", "Fold"];
+
+    for (const header of headers) {
+      const cardCol = document.createElement("div");
+      cardCol.classList.add("col");
+      cardCol.textContent = header;
+      stats.appendChild(cardCol);
+    }
+
+    for (const [cardName, actions] of Object.entries(player.strategy)) {
+      const cardCol = document.createElement("div");
+      cardCol.classList.add("col");
+      cardCol.textContent = Card[Number(cardName)] + ":";
+      stats.appendChild(cardCol);
+
+      for (const pct of Object.values(actions)) {
+        const col = document.createElement("div");
+        col.classList.add("col");
+        col.textContent = `${pct * 100}%`;
+        stats.appendChild(col);
+      }
+    }
+  }
+}

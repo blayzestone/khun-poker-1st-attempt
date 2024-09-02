@@ -25,27 +25,43 @@ export class Player {
 
     this.strategy = {
       [Card.Jack]: {
-        [Action.Bet]: 0.5,
-        [Action.Call]: 0.5,
-        [Action.Check]: 0.5,
-        [Action.Fold]: 0.5,
+        [Action.Bet]: 0,
+        [Action.Call]: 0,
+        [Action.Check]: 1,
+        [Action.Fold]: 1,
       },
       [Card.Queen]: {
-        [Action.Bet]: 0.5,
-        [Action.Call]: 0.5,
-        [Action.Check]: 0.5,
-        [Action.Fold]: 0.5,
+        [Action.Bet]: 0,
+        [Action.Call]: 1,
+        [Action.Check]: 1,
+        [Action.Fold]: 0,
       },
       [Card.King]: {
-        [Action.Bet]: 0.5,
-        [Action.Call]: 0.5,
-        [Action.Check]: 0.5,
-        [Action.Fold]: 0.5,
+        [Action.Bet]: 1,
+        [Action.Call]: 1,
+        [Action.Check]: 0,
+        [Action.Fold]: 0,
       },
     };
   }
 
-  getAction(actions: Action[]) {
-    return actions[Math.floor(Math.random() * actions.length)];
+  getAction(card: Card, actions: Action[]) {
+    const rng = Math.random();
+    let sum = 0;
+    for (const action of actions) {
+      console.log(
+        "rng:",
+        rng.toFixed(2),
+        "sum:",
+        sum.toFixed(2),
+        "action pct:",
+        this.strategy[card][action]
+      );
+      if (rng < this.strategy[card][action] + sum) {
+        console.log("action", action);
+        return action;
+      }
+      sum += this.strategy[card][action];
+    }
   }
 }

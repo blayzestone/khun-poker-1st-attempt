@@ -89,7 +89,11 @@ export class GameState {
       return;
     }
 
-    const action = this.turnPlayer.getAction(this.current.availableActions());
+    const card = this.cards[this.turnPlayer.id];
+    const action = this.turnPlayer.getAction(
+      card,
+      this.current.availableActions()
+    );
     const nextNode = this.current.children[action];
     if (!nextNode) {
       throw new Error(`No node available for action: ${action}`);

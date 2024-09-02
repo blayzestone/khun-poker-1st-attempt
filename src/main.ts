@@ -1,11 +1,13 @@
 import { FRAME_RATE } from "./constants";
 import { GameState } from "./gameState";
-import { setupNavButtons } from "./ui";
+import { setPlayerStats, setupNavButtons } from "./ui";
 
 function init() {
   let gameState = new GameState();
 
   setupNavButtons(gameState);
+  setPlayerStats(gameState.p1);
+  setPlayerStats(gameState.p2);
 
   let nextFrameTime = Date.now();
   function nextAnimationFrame() {
